@@ -312,7 +312,7 @@ std::shared_ptr<oat::OutgoingResponse> MyController::handle_load_unload(const st
     if (return_as_message) {
         result->message = ChatMessage::createShared();
         result->message->role = "assistant";
-        result->message->content = oatpp::String("");
+        result->message->content = nullptr;
     } else {
         result->response = "";
     }
