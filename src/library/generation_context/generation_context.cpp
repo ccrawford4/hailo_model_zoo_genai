@@ -96,19 +96,6 @@ hailort::genai::LLMGeneratorCompletion GenerationContext::generate_one(const Gen
 
     load_model(params.model_name, params.model_path, params.keep_alive);
 
-    // Tools are only legal on a fresh context, so their presence forces a full re-send of history.
-    if (!params.tools_json_strings.empty()) {
-        clear_llm_context();
-        OATPP_LOGi("GenerationThread", "Tools present, clearing context and sending {} messages with {} tools",
-            params.prompt_json_strings.size(), params.tools_json_strings.size());
-        auto generator_completion =
-            (*m_llm)
-                ->generate(params.generator_params, params.prompt_json_strings, params.tools_json_strings)
-                .expect("Failed to generate");
-        m_conversation_history = params.prompt_json_strings;
-        return generator_completion;
-    }
-
     // Check if this is a continuation of the previous conversation
     // by checking if the new messages start with the cached history as a prefix
     const bool is_continuation =
