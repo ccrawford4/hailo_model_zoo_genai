@@ -54,7 +54,8 @@ class ChatMessage : public oatpp::DTO
     DTO_INIT(ChatMessage, DTO)
 
     DTO_FIELD(String, role);
-    DTO_FIELD(String, content);
+    // OpenAI-style chat content may be null or structured, so keep this permissive.
+    DTO_FIELD(Any, content);
     DTO_FIELD(Vector<Fields<Any>>, tool_calls);
     DTO_FIELD(String, tool_name);
 };
@@ -109,7 +110,8 @@ class ChatCompletionMessage : public oatpp::DTO
     DTO_INIT(ChatCompletionMessage, DTO)
 
     DTO_FIELD(String, role);
-    DTO_FIELD(String, content); // TODO: switch to Any
+    // OpenAI-style chat content may be null or structured, so keep this permissive.
+    DTO_FIELD(Any, content);
     DTO_FIELD(Vector<Fields<Any>>, tool_calls);
     DTO_FIELD(String, tool_call_id);
 };
