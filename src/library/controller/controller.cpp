@@ -238,7 +238,7 @@ std::shared_ptr<oat::OutgoingResponse> MyController::handle_completion(const Mod
 
             auto message = ChatCompletionMessage::createShared();
             message->role = "assistant";
-            message->content = parse_result.content;
+            message->content = oatpp::String(parse_result.content.c_str());
 
             auto choice = ChatChoice::createShared();
             choice->index = oatpp::Int64(static_cast<int64_t>(0));
@@ -262,7 +262,7 @@ std::shared_ptr<oat::OutgoingResponse> MyController::handle_completion(const Mod
         if (return_type == ReturnType::MESSAGE) {
             result->message = ChatMessage::createShared();
             result->message->role = "assistant";
-            result->message->content = parse_result.content;
+            result->message->content = oatpp::String(parse_result.content.c_str());
             if (!parse_result.tool_calls.empty()) {
                 // Native Ollama shape: arguments stay an object, done_reason remains "stop".
                 const auto arguments_as_string = false;
@@ -312,7 +312,7 @@ std::shared_ptr<oat::OutgoingResponse> MyController::handle_load_unload(const st
     if (return_as_message) {
         result->message = ChatMessage::createShared();
         result->message->role = "assistant";
-        result->message->content = "";
+        result->message->content = oatpp::String("");
     } else {
         result->response = "";
     }

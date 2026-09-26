@@ -152,7 +152,7 @@ oatpp::v_io_size LLMGenerationReadCallback::read(void *buffer, v_buff_size buffe
         if (m_return_as_message) {
             result->message = ChatMessage::createShared();
             result->message->role = "assistant";
-            result->message->content = final_content;
+            result->message->content = oatpp::String(final_content.c_str());
             if (!parse_result.tool_calls.empty()) {
                 const auto arguments_as_string = false;
                 result->message->tool_calls = tool_calls_to_oatpp(parse_result.tool_calls, arguments_as_string,
@@ -183,7 +183,7 @@ oatpp::v_io_size LLMGenerationReadCallback::read(void *buffer, v_buff_size buffe
     if (m_return_as_message) {
         result->message = ChatMessage::createShared();
         result->message->role = "assistant";
-        result->message->content = std::move(streamable);
+        result->message->content = oatpp::String(streamable.c_str());
     } else {
         result->response = std::move(streamable);
     }
