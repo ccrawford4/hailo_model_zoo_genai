@@ -102,6 +102,38 @@ std::optional<plain_json> parse_tools(const oatpp::String& tools)
     }
 }
 
+std::string strip_json_fences(std::string content)
+{
+    auto trim = [](std::string& value) {
+        const auto begin = value.find_first_not_of(" \t\r\n");
+        if (begin == std::string::npos) {
+            value.clear();
+            return;
+        }
+        const auto end = value.find_last_not_of(" \t\r\n");
+        value = value.substr(begin, end - begin + 1);
+    };
+
+    trim(content);
+    if (content.rfind("```", 0) != 0) {
+        return content;
+    }
+
+    const auto fence_end = content.find('\n');
+    if (fence_end == std::string::npos) {
+        return content;
+    }
+
+    const auto closing = content.rfind("```");
+    if (closing == std::string::npos || closing <= fence_end) {
+        return content;
+    }
+
+    content = content.substr(fence_end + 1, closing - fence_end - 1);
+    trim(content);
+    return content;
+}
+
 std::optional<oatpp::Vector<oatpp::Fields<oatpp::Any>>> make_tool_calls(
     const plain_json& parsed,
     const std::shared_ptr<oatpp::data::mapping::ObjectMapper>& mapper
@@ -143,7 +175,8 @@ std::optional<oatpp::Vector<oatpp::Fields<oatpp::Any>>> parse_tool_calls_from_co
 )
 {
     try {
-        const auto parsed = plain_json::parse(content);
+        const auto cleaned = strip_json_fences(content);
+        const auto parsed = plain_json::parse(cleaned);
         return make_tool_calls(parsed, mapper);
     } catch (const std::exception&) {
     }

@@ -26,12 +26,43 @@
 #include "utils/time.hpp"
 
 namespace {
+std::string strip_json_fences(std::string content) {
+    auto trim = [](std::string& value) {
+        const auto begin = value.find_first_not_of(" \t\r\n");
+        if (begin == std::string::npos) {
+            value.clear();
+            return;
+        }
+        const auto end = value.find_last_not_of(" \t\r\n");
+        value = value.substr(begin, end - begin + 1);
+    };
+
+    trim(content);
+    if (content.rfind("```", 0) != 0) {
+        return content;
+    }
+
+    const auto fence_end = content.find('\n');
+    if (fence_end == std::string::npos) {
+        return content;
+    }
+
+    const auto closing = content.rfind("```");
+    if (closing == std::string::npos || closing <= fence_end) {
+        return content;
+    }
+
+    content = content.substr(fence_end + 1, closing - fence_end - 1);
+    trim(content);
+    return content;
+}
+
 std::optional<oatpp::Vector<oatpp::Fields<oatpp::Any>>> parse_tool_calls(
     const std::string& content,
     const std::shared_ptr<oatpp::data::mapping::ObjectMapper>& mapper
 ) {
     try {
-        const auto parsed = nlohmann::json::parse(content);
+        const auto parsed = nlohmann::json::parse(strip_json_fences(content));
         auto tool_calls = oatpp::Vector<oatpp::Fields<oatpp::Any>>::createShared();
         auto add_call = [&](const std::string& name, const nlohmann::json& arguments) {
             const auto call = nlohmann::json{{"type", "function"}, {"function", {{"name", name}, {"arguments", arguments}}}};
