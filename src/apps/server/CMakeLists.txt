@@ -14,8 +14,6 @@ target_link_libraries(hailo-ollama
     PRIVATE HailoRT::libhailort
 )
 
-if(NOT HAILO_SUPPORT_PACKAGING)
-    install(TARGETS hailo-ollama
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
-endif()
+install(TARGETS hailo-ollama
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)

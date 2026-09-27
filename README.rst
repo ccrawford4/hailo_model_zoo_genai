@@ -78,6 +78,26 @@ Two installation methods are available
 
     * **Note**: On Linux, ``sudo`` may be required for the install step.
 
+  * **Build a Debian release artifact**:
+
+    The repository can also produce a ``.deb`` package suitable for release uploads
+    and for image builds that want the installed manifest layout.
+
+    .. code-block:: bash
+      :name: hmzga-2b
+      :caption: Building a Debian release artifact.
+
+      git clone https://github.com/hailo-ai/hailo_model_zoo_genai.git
+      cd hailo-model-zoo-genai
+      cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      cmake --build build
+      cpack --config build/CPackConfig.cmake -G DEB
+
+    The resulting ``.deb`` will be written to the build directory and includes:
+
+    * the ``hailo-ollama`` binary
+    * the model manifest tree under ``share/hailo-ollama/models/manifests``
+
   * **Windows**:
     Clone the repository and build using CMake (Ensure OpenSSL and HailoRT are available):
 

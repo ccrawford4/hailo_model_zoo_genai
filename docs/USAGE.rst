@@ -74,6 +74,23 @@ Installation
     - ``hailo-ollama`` binary to ``bin/``
     - Model manifests to ``share/hailo-ollama/models/manifests/``
 
+  * **Linux release artifact**:
+
+    To build a Debian package that you can upload as a GitHub release artifact:
+
+    .. code-block:: bash
+      :name: hmzga-usage-3b
+      :caption: Building a Debian release artifact.
+
+      git clone https://github.com/hailo-ai/hailo_model_zoo_genai.git
+      cd hailo-model-zoo-genai
+      cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      cmake --build build
+      cpack --config build/CPackConfig.cmake -G DEB
+
+    The generated ``.deb`` is written to the build tree and includes the ``hailo-ollama``
+    binary plus the installed ``share/hailo-ollama/models/manifests`` directory.
+
 
 Hailo-Ollama REST API
 ---------------------

@@ -1,0 +1,34 @@
+name: Build Debian release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-deb:
+    runs-on: [self-hosted, linux, ARM64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DHAILO_BUILD_UT=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Package
+        run: cpack --config build/CPackConfig.cmake -G DEB
+
+      - name: Find package
+        id: pkg
+        run: echo "path=$(ls -1 build/*.deb | head -n 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.pkg.outputs.path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
