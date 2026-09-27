@@ -102,7 +102,7 @@ std::optional<plain_json> parse_tools(const oatpp::String& tools)
     }
 }
 
-oatpp::Vector<oatpp::Fields<oatpp::Any>> make_tool_calls(
+std::optional<oatpp::Vector<oatpp::Fields<oatpp::Any>>> make_tool_calls(
     const plain_json& parsed,
     const std::shared_ptr<oatpp::data::mapping::ObjectMapper>& mapper
 )
@@ -126,12 +126,15 @@ oatpp::Vector<oatpp::Fields<oatpp::Any>> make_tool_calls(
             }
             add_call(function.value("name", ""), function.value("arguments", plain_json::object()));
         }
-        return tool_calls;
+        if (!tool_calls->empty()) {
+            return tool_calls;
+        }
     }
     if (parsed.is_object() && parsed.contains("name")) {
         add_call(parsed.value("name", ""), parsed.value("arguments", plain_json::object()));
+        return tool_calls;
     }
-    return tool_calls;
+    return std::nullopt;
 }
 
 std::optional<oatpp::Vector<oatpp::Fields<oatpp::Any>>> parse_tool_calls_from_content(
@@ -141,10 +144,7 @@ std::optional<oatpp::Vector<oatpp::Fields<oatpp::Any>>> parse_tool_calls_from_co
 {
     try {
         const auto parsed = plain_json::parse(content);
-        auto tool_calls = make_tool_calls(parsed, mapper);
-        if (tool_calls && !tool_calls->empty()) {
-            return tool_calls;
-        }
+        return make_tool_calls(parsed, mapper);
     } catch (const std::exception&) {
     }
     return std::nullopt;
