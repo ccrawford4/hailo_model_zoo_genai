@@ -90,10 +90,13 @@ std::optional<plain_json> parse_tools(const oatpp::String& tools)
     }
     try {
         const auto parsed = plain_json::parse(tools->c_str());
-        if (!parsed.is_array()) {
-            return std::nullopt;
+        if (parsed.is_array()) {
+            return parsed;
         }
-        return parsed;
+        if (parsed.is_object() && parsed.contains("tools") && parsed["tools"].is_array()) {
+            return parsed["tools"];
+        }
+        return std::nullopt;
     } catch (const std::exception&) {
         return std::nullopt;
     }
@@ -666,6 +669,9 @@ MyController::chat(const oatpp::Object<ChatParams>& generation_params) {
         json::parse(m_contentMappers->getDefaultMapper()
                         ->writeToString(generation_params->messages)
                         .getValue(""));
+    if (const auto tools = parse_tools(generation_params->tools)) {
+        inputs.tools = *tools;
+    }
 
     const std::string prompt_templ = templ.apply(inputs);
 
@@ -722,6 +728,9 @@ std::shared_ptr<oat::OutgoingResponse> MyController::chat_completions(
         json::parse(m_contentMappers->getDefaultMapper()
                         ->writeToString(generation_params->messages)
                         .getValue(""));
+    if (const auto tools = parse_tools(generation_params->tools)) {
+        inputs.tools = *tools;
+    }
 
     const std::string prompt_templ = templ.apply(inputs);
 
