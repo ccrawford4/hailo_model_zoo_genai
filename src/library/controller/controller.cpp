@@ -618,9 +618,6 @@ std::shared_ptr<oat::OutgoingResponse> MyController::generate(
     minja::chat_template_inputs inputs;
     inputs.add_generation_prompt = true;
     inputs.messages = json {{{"role", "user"}, {"content", prompt}}};
-    if (const auto tools = parse_tools(generation_params->tools)) {
-        inputs.tools = *tools;
-    }
 
     const std::string prompt_templ = templ.apply(inputs);
 
@@ -669,9 +666,6 @@ MyController::chat(const oatpp::Object<ChatParams>& generation_params) {
         json::parse(m_contentMappers->getDefaultMapper()
                         ->writeToString(generation_params->messages)
                         .getValue(""));
-    if (const auto tools = parse_tools(generation_params->tools)) {
-        inputs.tools = *tools;
-    }
 
     const std::string prompt_templ = templ.apply(inputs);
 
@@ -728,9 +722,6 @@ std::shared_ptr<oat::OutgoingResponse> MyController::chat_completions(
         json::parse(m_contentMappers->getDefaultMapper()
                         ->writeToString(generation_params->messages)
                         .getValue(""));
-    if (const auto tools = parse_tools(generation_params->tools)) {
-        inputs.tools = *tools;
-    }
 
     const std::string prompt_templ = templ.apply(inputs);
 
