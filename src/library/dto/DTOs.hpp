@@ -52,6 +52,7 @@ class ChatMessage: public oatpp::DTO {
 
     DTO_FIELD(String, role);
     DTO_FIELD(String, content);
+    DTO_FIELD(Vector<Fields<Any>>, tool_calls);
 };
 
 class ChatParams: public oatpp::DTO {
@@ -101,6 +102,7 @@ class ChatCompletionMessage: public oatpp::DTO {
 
     DTO_FIELD(String, role);
     DTO_FIELD(String, content);  // TODO: switch to Any
+    DTO_FIELD(Vector<Fields<Any>>, tool_calls);
 };
 
 class CreateChatCompletionParams: public oatpp::DTO {

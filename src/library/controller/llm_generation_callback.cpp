@@ -17,12 +17,48 @@
 #include <vector>
 
 #include <hailo/genai/llm/llm.hpp>
+#include <nlohmann/json.hpp>
 #include <oatpp/data/mapping/ObjectMapper.hpp>
 #include <oatpp/data/stream/Stream.hpp>
 
 #include "dto/DTOs.hpp"
 #include "generation_context/generation_context.hpp"
 #include "utils/time.hpp"
+
+namespace {
+std::optional<oatpp::Vector<oatpp::Fields<oatpp::Any>>> parse_tool_calls(
+    const std::string& content,
+    const std::shared_ptr<oatpp::data::mapping::ObjectMapper>& mapper
+) {
+    try {
+        const auto parsed = nlohmann::json::parse(content);
+        auto tool_calls = oatpp::Vector<oatpp::Fields<oatpp::Any>>::createShared();
+        auto add_call = [&](const std::string& name, const nlohmann::json& arguments) {
+            const auto call = nlohmann::json{{"type", "function"}, {"function", {{"name", name}, {"arguments", arguments}}}};
+            tool_calls->push_back(mapper->readFromString<oatpp::Fields<oatpp::Any>>(call.dump()));
+        };
+        if (parsed.is_object() && parsed.contains("tool_calls") && parsed["tool_calls"].is_array()) {
+            for (const auto& tool_call : parsed["tool_calls"]) {
+                if (!tool_call.is_object()) {
+                    continue;
+                }
+                const auto function = tool_call.value("function", nlohmann::json::object());
+                if (!function.is_object() || !function.contains("name")) {
+                    continue;
+                }
+                add_call(function.value("name", ""), function.value("arguments", nlohmann::json::object()));
+            }
+        } else if (parsed.is_object() && parsed.contains("name")) {
+            add_call(parsed.value("name", ""), parsed.value("arguments", nlohmann::json::object()));
+        }
+        if (!tool_calls->empty()) {
+            return tool_calls;
+        }
+    } catch (const std::exception&) {
+    }
+    return std::nullopt;
+}
+}  // namespace
 
 LLMGenerationReadCallback::LLMGenerationReadCallback(
     const std::string& model,
@@ -104,6 +140,9 @@ oatpp::v_io_size LLMGenerationReadCallback::read(
             result->message = ChatMessage::createShared();
             result->message->role = "assistant";
             result->message->content = "";
+            if (const auto tool_calls = parse_tool_calls(m_response.str(), m_object_mapper)) {
+                result->message->tool_calls = *tool_calls;
+            }
         } else {
             result->response = "";
         }

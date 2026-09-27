@@ -20,6 +20,7 @@
 
 #include <hailo/genai/llm/llm.hpp>
 #include <minja/chat-template.hpp>
+#include <nlohmann/json.hpp>
 #include <oatpp/base/Log.hpp>
 #include <oatpp/data/mapping/ObjectMapper.hpp>
 #include <oatpp/macro/codegen.hpp>
@@ -38,6 +39,7 @@
 #include "utils/time.hpp"
 
 using json = nlohmann::ordered_json;
+using plain_json = nlohmann::json;
 namespace fs = std::filesystem;
 
 // manage all long imports  from oatpp
@@ -79,6 +81,70 @@ void set_options(
     if (options->num_predict != nullptr) {
         generation.max_generated_tokens = options->num_predict;
     }
+}
+
+std::optional<plain_json> parse_tools(const oatpp::String& tools)
+{
+    if (!tools) {
+        return std::nullopt;
+    }
+    try {
+        const auto parsed = plain_json::parse(tools->c_str());
+        if (!parsed.is_array()) {
+            return std::nullopt;
+        }
+        return parsed;
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
+oatpp::Vector<oatpp::Fields<oatpp::Any>> make_tool_calls(
+    const plain_json& parsed,
+    const std::shared_ptr<oatpp::data::mapping::ObjectMapper>& mapper
+)
+{
+    auto tool_calls = oatpp::Vector<oatpp::Fields<oatpp::Any>>::createShared();
+    auto add_call = [&](const std::string& name, const plain_json& arguments) {
+        auto function = plain_json::object();
+        function["name"] = name;
+        function["arguments"] = arguments;
+        plain_json call = {{"type", "function"}, {"function", function}};
+        tool_calls->push_back(mapper->readFromString<oatpp::Fields<oatpp::Any>>(call.dump()));
+    };
+    if (parsed.is_object() && parsed.contains("tool_calls") && parsed["tool_calls"].is_array()) {
+        for (const auto& tool_call : parsed["tool_calls"]) {
+            if (!tool_call.is_object()) {
+                continue;
+            }
+            const auto function = tool_call.value("function", plain_json::object());
+            if (!function.is_object() || !function.contains("name")) {
+                continue;
+            }
+            add_call(function.value("name", ""), function.value("arguments", plain_json::object()));
+        }
+        return tool_calls;
+    }
+    if (parsed.is_object() && parsed.contains("name")) {
+        add_call(parsed.value("name", ""), parsed.value("arguments", plain_json::object()));
+    }
+    return tool_calls;
+}
+
+std::optional<oatpp::Vector<oatpp::Fields<oatpp::Any>>> parse_tool_calls_from_content(
+    const std::string& content,
+    const std::shared_ptr<oatpp::data::mapping::ObjectMapper>& mapper
+)
+{
+    try {
+        const auto parsed = plain_json::parse(content);
+        auto tool_calls = make_tool_calls(parsed, mapper);
+        if (tool_calls && !tool_calls->empty()) {
+            return tool_calls;
+        }
+    } catch (const std::exception&) {
+    }
+    return std::nullopt;
 }
 }  // namespace
 
@@ -266,6 +332,10 @@ std::shared_ptr<oat::OutgoingResponse> MyController::handle_completion(
             auto message = ChatCompletionMessage::createShared();
             message->role = "assistant";
             message->content = response.str();
+            if (const auto tool_calls = parse_tool_calls_from_content(response.str(), m_contentMappers->getDefaultMapper())) {
+                message->content = "";
+                message->tool_calls = *tool_calls;
+            }
 
             auto choice = ChatChoice::createShared();
             choice->index = 0L;
@@ -282,6 +352,10 @@ std::shared_ptr<oat::OutgoingResponse> MyController::handle_completion(
             result->message = ChatMessage::createShared();
             result->message->role = "assistant";
             result->message->content = response.str();
+            if (const auto tool_calls = parse_tool_calls_from_content(response.str(), m_contentMappers->getDefaultMapper())) {
+                result->message->content = "";
+                result->message->tool_calls = *tool_calls;
+            }
         } else {
             result->response = response.str();
         }
@@ -544,6 +618,9 @@ std::shared_ptr<oat::OutgoingResponse> MyController::generate(
     minja::chat_template_inputs inputs;
     inputs.add_generation_prompt = true;
     inputs.messages = json {{{"role", "user"}, {"content", prompt}}};
+    if (const auto tools = parse_tools(generation_params->tools)) {
+        inputs.tools = *tools;
+    }
 
     const std::string prompt_templ = templ.apply(inputs);
 
@@ -592,6 +669,9 @@ MyController::chat(const oatpp::Object<ChatParams>& generation_params) {
         json::parse(m_contentMappers->getDefaultMapper()
                         ->writeToString(generation_params->messages)
                         .getValue(""));
+    if (const auto tools = parse_tools(generation_params->tools)) {
+        inputs.tools = *tools;
+    }
 
     const std::string prompt_templ = templ.apply(inputs);
 
@@ -648,6 +728,9 @@ std::shared_ptr<oat::OutgoingResponse> MyController::chat_completions(
         json::parse(m_contentMappers->getDefaultMapper()
                         ->writeToString(generation_params->messages)
                         .getValue(""));
+    if (const auto tools = parse_tools(generation_params->tools)) {
+        inputs.tools = *tools;
+    }
 
     const std::string prompt_templ = templ.apply(inputs);
 
