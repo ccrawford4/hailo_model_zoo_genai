@@ -61,7 +61,7 @@ class ChatParams: public oatpp::DTO {
     DTO_FIELD(String, model);
     // These are actually json but we use nlohmann/json for them
     DTO_FIELD(Vector<Object<ChatMessage>>, messages);
-    DTO_FIELD(String, tools);
+    DTO_FIELD(Vector<Fields<Any>>, tools);
 
     DTO_FIELD(String, format);
     DTO_FIELD(Object<ModelParameters>, options);
@@ -110,7 +110,7 @@ class CreateChatCompletionParams: public oatpp::DTO {
 
     DTO_FIELD(String, model);
     DTO_FIELD(Vector<Object<ChatCompletionMessage>>, messages);
-    DTO_FIELD(String, tools);
+    DTO_FIELD(Vector<Fields<Any>>, tools);
     DTO_FIELD(Float32, frequency_penalty);
     DTO_FIELD(Float32, presence_penalty);
     DTO_FIELD(Int64, max_completion_tokens);
